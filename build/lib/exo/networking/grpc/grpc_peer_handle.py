@@ -32,24 +32,11 @@ class GRPCPeerHandle(PeerHandle):
 
   async def connect(self):
     if self.channel is None:
-      # Increased message sizes to match server
-      # Added keepalive settings to prevent timeouts
-      # Added retry policy for better reliability
-      self.channel = grpc.aio.insecure_channel(
-        self.address, 
-        options=[
-          ("grpc.max_metadata_size", 128*1024*1024),
-          ('grpc.max_receive_message_length', 128*1024*1024),
-          ('grpc.max_send_message_length', 128*1024*1024),
-          ('grpc.keepalive_time_ms', 20000),  # Send keepalive ping every 20 seconds
-          ('grpc.keepalive_timeout_ms', 10000),  # Wait 10 seconds for keepalive ping response
-          ('grpc.keepalive_permit_without_calls', True),  # Allow keepalive pings when no calls are in-flight
-          ('grpc.http2.min_time_between_pings_ms', 10000),  # Minimum 10 seconds between pings
-          ('grpc.http2.max_pings_without_data', 5),  # Allow up to 5 pings without data
-          ('grpc.enable_retries', 1),
-          ('grpc.service_config', '{"retryPolicy": { "maxAttempts": 4, "initialBackoff": "0.1s", "maxBackoff": "1s", "backoffMultiplier": 2.0, "retryableStatusCodes": ["UNAVAILABLE"]}}'),
-        ]
-      )
+      self.channel = grpc.aio.insecure_channel(self.address, options=[
+        ("grpc.max_metadata_size", 32*1024*1024),
+        ('grpc.max_receive_message_length', 32*1024*1024),
+        ('grpc.max_send_message_length', 32*1024*1024)
+      ])
       self.stub = node_service_pb2_grpc.NodeServiceStub(self.channel)
     await self.channel.channel_ready()
 
@@ -63,19 +50,13 @@ class GRPCPeerHandle(PeerHandle):
     self.stub = None
 
   async def _ensure_connected(self):
-    if not await self.is_connected(): 
-      try:
-        await asyncio.wait_for(self.connect(), timeout=10)  # Increased timeout
-      except asyncio.TimeoutError:
-        if DEBUG >= 4:
-          print(f"Connection timeout for {self._id}@{self.address}")
-        raise
+    if not await self.is_connected(): await asyncio.wait_for(self.connect(), timeout=5)
 
   async def health_check(self) -> bool:
     try:
       await self._ensure_connected()
       request = node_service_pb2.HealthCheckRequest()
-      response = await asyncio.wait_for(self.stub.HealthCheck(request), timeout=10)  # Increased timeout
+      response = await asyncio.wait_for(self.stub.HealthCheck(request), timeout=5)
       return response.is_healthy
     except asyncio.TimeoutError:
       return False
