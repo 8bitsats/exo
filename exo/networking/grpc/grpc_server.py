@@ -29,6 +29,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
     self.server = grpc.aio.server(
       futures.ThreadPoolExecutor(max_workers=32),
       options=[
+<<<<<<< HEAD
         ("grpc.max_metadata_size", 32*1024*1024),
         ("grpc.max_send_message_length", 256*1024*1024),
         ("grpc.max_receive_message_length", 256*1024*1024),
@@ -40,6 +41,19 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
         ("grpc.max_concurrent_streams", 100),
         ("grpc.tcp_nodelay", 1),
         ("grpc.optimization_target", "throughput"),
+=======
+        ("grpc.max_metadata_size", 128*1024*1024),
+        ("grpc.max_send_message_length", 128*1024*1024),
+        ("grpc.max_receive_message_length", 128*1024*1024),
+        ('grpc.keepalive_time_ms', 20000),  # Send keepalive ping every 20 seconds
+        ('grpc.keepalive_timeout_ms', 10000),  # Wait 10 seconds for keepalive ping response
+        ('grpc.keepalive_permit_without_calls', True),  # Allow keepalive pings when no calls are in-flight
+        ('grpc.http2.min_time_between_pings_ms', 10000),  # Minimum 10 seconds between pings
+        ('grpc.http2.max_pings_without_data', 5),  # Allow up to 5 pings without data
+        ('grpc.max_connection_idle_ms', 60000),  # Close idle connections after 60 seconds
+        ('grpc.max_connection_age_ms', 300000),  # Close connections after 5 minutes
+        ('grpc.max_connection_age_grace_ms', 5000),  # Grace period of 5 seconds for connection closure
+>>>>>>> 64d1bc4262a715b90f5f8c84e1655fa05de33574
       ],
     )
     node_service_pb2_grpc.add_NodeServiceServicer_to_server(self, self.server)
@@ -51,7 +65,7 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
   async def stop(self) -> None:
     if self.server:
       try:
-        await self.server.stop(grace=5)
+        await self.server.stop(grace=10)  # Increased grace period
         await self.server.wait_for_termination()
       except CancelledError:
         pass
