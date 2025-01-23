@@ -152,7 +152,7 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
+/Users/cheshir/Desktop/CheshCasino/exo/deep/.env
 # Pyre type checker
 .pyre/
 
